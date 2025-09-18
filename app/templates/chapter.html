@@ -1,0 +1,441 @@
+{% extends "base.html" %}
+
+{% block title %} {{ book.title }}{% endblock %}
+
+{% block content %}
+    <!-- Скрытый контейнер для передачи данных в JavaScript -->
+    <div id="chapter-data" 
+        data-book-id="{{ book.id|tojson|safe }}"
+        data-current-chapter-id="{{ current_chapter_id|default(0)|tojson|safe }}"
+        data-user-authenticated="{{ current_user.is_authenticated|tojson|safe }}"
+        style="display: none;">
+    </div>
+
+     <!-- Модальное окно для входа/регистрации -->
+     <div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Требуется вход</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Чтобы сохранять закладки, войдите или зарегистрируйтесь
+                    </div>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-sign-in-alt me-2"></i>Войти
+                        </a>
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-success btn-lg">
+                            <i class="fas fa-user-plus me-2"></i>Регистрация
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="chapter-page">
+        <div class="chapter-content">
+            <!-- Кнопка закладки - видна всем пользователям -->
+            <div class="bookmark-button-container">
+                <button id="bookmarkButton" class="btn btn-outline-warning bookmark-icon 
+                        {% if current_user.is_authenticated and bookmarked %}bookmarked{% endif %}" 
+                        aria-label="Добавить в закладки">
+                    <i class="{% if current_user.is_authenticated and bookmarked %}fas{% else %}far{% endif %} fa-bookmark"></i>
+                </button>
+            </div>
+
+            <article class="chapter-text">
+                {{ chapter_content|safe }}
+            </article>
+
+            <!-- Блок пересказа персонажа (изначально скрыт) -->
+            <div class="character-summary card mt-4" id="characterSummaryContainer" style="display: none;">
+                <div class="card-header">
+                    <h3 class="mb-0">
+                        <i class="fas fa-scroll me-2"></i>
+                        Пересказ главы по персонажу
+                    </h3>
+                </div>
+                <div class="card-body" id="characterSummary">
+                    <!-- Контент будет добавляться динамически -->
+                </div>
+            </div>
+
+            <!-- Модальное окно для истории персонажа -->
+            <div class="character-modal modal fade" id="characterModal" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Появления персонажа</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="characterTimeline"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Навигация между главами -->
+            <div class="chapter-navigation mt-4 d-flex flex-wrap justify-content-center align-items-center">
+                <div class="d-flex gap-2 w-100">
+                    {% if prev_chapter %}
+                        <a href="{{ url_for('books.read_chapter', book_id=book.id, chapter_id=prev_chapter.id) }}" 
+                        class="nav-button prev-chapter btn btn-primary flex-grow-1">
+                            <i class="fas fa-arrow-left"></i>
+                            Предыдущая глава
+                        </a>
+                    {% endif %}
+
+                    <a href="{{ url_for('books.view', book_id=book.id) }}" class="nav-button toc-link btn btn-primary flex-grow-1">
+                        <i class="fas fa-list-ol"></i>
+                        Оглавление
+                    </a>
+                    {% if next_chapter %}
+                    <a href="{{ url_for('books.read_chapter', book_id=book.id, chapter_id=next_chapter.id) }}" 
+                    class="nav-button next-chapter btn btn-primary flex-grow-1">
+                        Следующая глава
+                        <i class="fas fa-arrow-right"></i>
+                    </a>
+                {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Контейнер для toast-уведомлений -->
+    <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Инициализация состояния
+            const chapterData = document.getElementById('chapter-data');
+            const state = {
+                bookId: parseInt(chapterData.dataset.bookId),
+                currentChapterId: parseInt(chapterData.dataset.currentChapterId),
+                userAuthenticated: chapterData.dataset.userAuthenticated === 'true',
+                elements: {
+                    modal: new bootstrap.Modal('#characterModal'),
+                    loginModal: new bootstrap.Modal('#loginModal'),
+                    timeline: document.getElementById('characterTimeline'),
+                    summary: document.getElementById('characterSummary'),
+                    loadingTemplate: `
+                        <div class="loader text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Загрузка...</span>
+                            </div>
+                            <p class="mt-2 text-muted">Формируем пересказ...</p>
+                        </div>
+                    `
+                }
+            };
+    
+            // Конфигурация API
+            const API = {
+                characterSummary: (characterId) => 
+                    `/books/${state.bookId}/character/${characterId}/chapters-summary?chapter_id=${state.currentChapterId}`,
+                bookmark: `/books/${state.bookId}/chapter/${state.currentChapterId}/bookmark`,
+                bookmarkStatus: `/books/${state.bookId}/chapter/${state.currentChapterId}/bookmark/status`
+            };
+            
+            // Обработчик клика по персонажу
+            async function handleCharacterClick(event) {
+                const target = event.target.closest('.character-highlight');
+                if (!target) return;
+    
+                try {
+                    const characterId = target.dataset.characterId;
+                    const originalName = target.dataset.originalName;
+                    
+                    showLoadingState();
+                    
+                    const response = await fetch(API.characterSummary(characterId));
+                    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                    
+                    const data = await response.json();
+                    renderChapterSummaries(data, originalName);
+    
+                } catch (error) {
+                    showErrorState(error.message);
+                } finally {
+                    state.elements.modal.show();
+                }
+            }
+    
+            // Отображение состояния загрузки
+            function showLoadingState() {
+                state.elements.timeline.innerHTML = state.elements.loadingTemplate;
+                state.elements.summary.innerHTML = '';
+            }
+    
+            // Рендер пересказов глав
+            function renderChapterSummaries(data, characterName) {
+                const container = state.elements.timeline;
+                container.innerHTML = '';
+                
+                const timeline = document.createElement('div');
+                timeline.className = 'timeline-container';
+    
+                const title = document.createElement('h4');
+                title.className = 'mb-4';
+                title.innerHTML = `${characterName}`;
+                timeline.appendChild(title);
+    
+                if (data.summaries && data.summaries.length > 0) {
+                    data.summaries.forEach((summary) => {
+                        const chapterBlock = document.createElement('div');
+                        chapterBlock.className = 'chapter-block mb-4';
+    
+                        chapterBlock.innerHTML = `
+                            <div class="chapter-header bg-light p-3 rounded-top">
+                                <h5 class="mb-0">
+                                    <span class="badge bg-primary me-2">Глава ${summary.number}</span>
+                                    ${summary.title}
+                                </h5>
+                            </div>
+                            <div class="chapter-content bg-white p-3 rounded-bottom border">
+                                ${summary.content.map(c => `<div class="context-item mb-2">${c}</div>`).join('')}
+                            </div>
+                        `;
+    
+                        timeline.appendChild(chapterBlock);
+                    });
+                } else {
+                    timeline.innerHTML = `
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Персонаж не упоминался в предыдущих главах
+                        </div>
+                    `;
+                }
+                
+                container.appendChild(timeline);
+            }
+    
+            // Отображение ошибок
+            function showErrorState(message) {
+                state.elements.summary.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${message || 'Произошла ошибка при загрузке данных'}
+                    </div>
+                `;
+            }
+    
+            // Функция для проверки статуса закладки
+            async function checkBookmarkStatus() {
+                try {
+                    const response = await fetch(API.bookmarkStatus);
+                    if (response.ok) {
+                        const data = await response.json();
+                        return data.bookmarked;
+                    }
+                    return false;
+                } catch (error) {
+                    console.error('Ошибка при проверке закладки:', error);
+                    return false;
+                }
+            }
+    
+            // Обновление иконки закладки
+            async function updateBookmarkIcon() {
+                const button = document.getElementById('bookmarkButton');
+                if (!button) return;
+                
+                const icon = button.querySelector('i');
+                
+                if (!state.userAuthenticated) {
+                    // Для неавторизованных - всегда контурная иконка
+                    icon.classList.remove('fas');
+                    icon.classList.add('far');
+                    button.classList.remove('bookmarked');
+                    button.classList.add('unauthenticated');
+                    return;
+                } else {
+                    button.classList.remove('unauthenticated');
+                }
+                
+                // Для авторизованных - проверяем статус закладки
+                const isBookmarked = await checkBookmarkStatus();
+                
+                if (isBookmarked) {
+                    icon.classList.remove('far');
+                    icon.classList.add('fas');
+                    button.classList.add('bookmarked');
+                } else {
+                    icon.classList.remove('fas');
+                    icon.classList.add('far');
+                    button.classList.remove('bookmarked');
+                }
+            }
+    
+            // Обработчик клика по кнопке закладки
+            async function handleBookmarkClick() {
+                // Проверяем авторизацию
+                if (!state.userAuthenticated) {
+                    showLoginModal();
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(API.bookmark, {
+                        method: 'POST'
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        await updateBookmarkIcon();
+                        
+                        if (result.status === 'added') {
+                            showToast('Глава добавлена в закладки!', 'success');
+                        } else {
+                            showToast('Глава удалена из закладок', 'info');
+                        }
+                    } else if (response.status === 401) {
+                        showToast('Сессия истекла, войдите снова', 'warning');
+                        state.userAuthenticated = false;
+                        await updateBookmarkIcon();
+                    }
+                } catch (error) {
+                    showToast('Ошибка при обновлении закладки', 'danger');
+                }
+            }
+    
+            // Показать информационное сообщение для входа
+            function showLoginModal() {
+                state.elements.loginModal.show();
+            }
+    
+            // Функция для показа toast-уведомления
+            function showToast(message, type) {
+                const toastElement = document.createElement('div');
+                toastElement.className = `toast show`;
+                toastElement.setAttribute('role', 'alert');
+                toastElement.setAttribute('aria-live', 'assertive');
+                toastElement.setAttribute('aria-atomic', 'true');
+                
+                toastElement.innerHTML = `
+                    <div class="toast-header bg-${type} text-white">
+                        <strong class="me-auto">Уведомление</strong>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                `;
+                
+                const container = document.getElementById('toastContainer');
+                container.appendChild(toastElement);
+                
+                const toast = new bootstrap.Toast(toastElement);
+                toast.show();
+                
+                setTimeout(() => {
+                    toastElement.remove();
+                }, 3000);
+            }
+    
+            // Инициализация обработчиков
+            function initEventListeners() {
+                document.querySelectorAll('.character-highlight').forEach(el => {
+                    el.addEventListener('click', handleCharacterClick);
+                });
+                
+                // Добавляем обработчик для кнопки закладки
+                const bookmarkButton = document.getElementById('bookmarkButton');
+                if (bookmarkButton) {
+                    bookmarkButton.addEventListener('click', handleBookmarkClick);
+                }
+            }
+    
+            // Обновляем иконку закладки при загрузке
+            if (document.getElementById('bookmarkButton')) {
+                await updateBookmarkIcon();
+            }
+            
+            // Запуск обработчиков событий
+            initEventListeners();
+        });
+    </script>
+    
+    <style>
+        .chapter-summary {
+            transition: transform 0.2s, box-shadow 0.2s;
+            border-left: 3px solid #3498db;
+        }
+        
+        .chapter-summary:hover {
+            transform: translateX(5px);
+            box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
+        }
+        
+        .character-summaries {
+            max-height: 70vh;
+            overflow-y: auto;
+            padding-right: 15px;
+        }
+        
+        .loader {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 30px;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* Стили для кнопки закладки */
+        .bookmark-icon {
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .bookmarked {
+            color: #ffc107;
+        }
+
+        .bookmark-icon:hover {
+            transform: scale(1.1);
+        }
+        
+        /* Стили для навигации */
+        .chapter-navigation {
+            gap: 10px;
+            padding: 15px 0;
+            border-top: 1px solid #eee;
+        }
+        
+        @media (max-width: 768px) {
+            .chapter-navigation {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .chapter-navigation > div {
+                width: 100%;
+                justify-content: center !important;
+                margin-bottom: 10px;
+            }
+        }
+        .bookmark-button-container {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            z-index: 1000;
+        }
+    </style>
+{% endblock %}

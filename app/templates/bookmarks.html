@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block title %}Мои закладки{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">Мои закладки</h2>
+    
+    {% if bookmarks %}
+        <div class="bookmarks-list">
+            {% for bookmark in bookmarks %}
+                <div class="bookmark-card card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="card-title">
+                                    <a href="{{ url_for('books.read_chapter', book_id=bookmark.book.id, chapter_id=bookmark.chapter.id) }}">
+                                        {{ bookmark.book.title }} - {{ bookmark.chapter.title }}
+                                    </a>
+                                </h5>
+                                <p class="card-text text-muted">
+                                    <small>Добавлено: {{ bookmark.created_at.strftime('%d.%m.%Y %H:%M') }}</small>
+                                </p>
+                            </div>
+                            <form method="POST" action="{{ url_for('books.delete_bookmark', bookmark_id=bookmark.id) }}"
+                                  id="delete-form-{{ bookmark.id }}">
+                                <button type="button" class="btn btn-sm btn-outline-danger delete-bookmark-btn"
+                                        data-bs-toggle="modal" data-bs-target="#confirmDeleteModal"
+                                        data-bookmark-id="{{ bookmark.id }}"
+                                        data-bookmark-title="{{ bookmark.book.title }} - {{ bookmark.chapter.title }}">
+                                    <i class="fas fa-trash-alt"></i> Удалить
+                                </button>
+                            </form>
+                        </div>
+                        <div class="mt-2">
+                            <a href="{{ url_for('books.view', book_id=bookmark.book.id) }}" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-book"></i> Перейти к книге
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <!-- ... существующий код для пустого списка ... -->
+    {% endif %}
+</div>
+
+<!-- Модальное окно подтверждения удаления -->
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmDeleteModalLabel">Подтверждение удаления</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Вы уверены, что хотите удалить закладку?</p>
+                <p><strong id="bookmark-title"></strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-danger" id="confirm-delete-btn">Удалить</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteModal = document.getElementById('confirmDeleteModal');
+    const bookmarkTitle = document.getElementById('bookmark-title');
+    const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+    let currentBookmarkId = null;
+    
+    // Обработчик клика по кнопке удаления
+    document.querySelectorAll('.delete-bookmark-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            currentBookmarkId = this.dataset.bookmarkId;
+            bookmarkTitle.textContent = this.dataset.bookmarkTitle;
+        });
+    });
+    
+    // Обработчик подтверждения удаления
+    confirmDeleteBtn.addEventListener('click', function() {
+        if (currentBookmarkId) {
+            const form = document.getElementById(`delete-form-${currentBookmarkId}`);
+            form.submit();
+        }
+    });
+    
+    // Сброс текущей закладки при закрытии модального окна
+    deleteModal.addEventListener('hidden.bs.modal', function() {
+        currentBookmarkId = null;
+    });
+});
+</script>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .bookmark-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        border-left: 4px solid #4e73df;
+    }
+    
+    .bookmark-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+</style>
+{% endblock %}

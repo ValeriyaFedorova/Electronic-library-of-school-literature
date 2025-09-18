@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+
+{% block title %}Мой профиль{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header text-white">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-user-circle me-2"></i>
+                        Мой профиль
+                    </h3>
+                </div>
+                
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-3 fw-bold">Имя пользователя:</div>
+                        <div class="col-md-9">{{ current_user.username }}</div>
+                        
+                        <div class="col-md-3 fw-bold mt-2">Email:</div>
+                        <div class="col-md-9 mt-2">{{ current_user.email }}</div>
+                        
+                        <div class="col-md-3 fw-bold mt-2">Дата регистрации:</div>
+                        <div class="col-md-9 mt-2">{{ current_user.created_at.strftime('%d.%m.%Y') }}</div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                            <i class="fas fa-trash-alt me-2"></i>
+                            Удалить аккаунт
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно подтверждения удаления аккаунта -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteAccountModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Удаление аккаунта
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <form method="POST" action="{{ url_for('auth.delete_account') }}">
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        <p class="mb-0">
+                            <strong>Внимание!</strong> Это действие невозможно отменить.
+                        </p>
+                    </div>
+                    
+                    <p>Вы собираетесь полностью удалить свой аккаунт и все связанные данные:</p>
+                    <ul>
+                        <li>Ваш профиль</li>
+                        <li>Все сохранённые закладки</li>
+                    </ul>
+                    
+                    <p>Для подтверждения введите свой пароль:</p>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Пароль</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>
+                        Отмена
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash-alt me-2"></i>
+                        Удалить аккаунт
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+
+<style>
+    .card {
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .card-header {
+        border-top-left-radius: 10px !important;
+        border-top-right-radius: 10px !important;
+        background-color: #2c42ba;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}{{ book.title }}{% endblock %}
+
+{% macro render_chapter(chapter) %}
+    <li class="chapter-item {% if chapter.children %}parent-item{% endif %}">
+        <div class="chapter-header">
+            {% if chapter.children %}
+                <span class="toggle" onclick="toggleChapter(this)">⯈</span>
+            {% endif %}
+            <a href="{{ url_for('books.read_chapter', book_id=book.id, chapter_id=chapter.id) }}">
+                {{ chapter.title }}
+            </a>
+        </div>
+        {% if chapter.children %}
+            <ul class="child-chapters">
+                {% for child in chapter.children|sort(attribute='number') %}
+                    {{ render_chapter(child) }}
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </li>
+{% endmacro %}
+
+{% block content %}
+    <div class="book-page">
+        <div class="book-header">
+            {% if book.cover_path %}
+                <div class="book-page-cover">
+                    <img src="{{ url_for('books.serve_content', filename=book.cover_path) }}" alt="{{ book.title }}">
+                </div>
+            {% endif %}
+            <div class="book-page-info">
+                <h1 class="book-page-title">{{ book.title }}</h1>
+                <p class="book-page-author">{{ book.author }}</p>
+            </div>
+        </div>  
+
+        <div class="chapters-list">
+            <h2 class="chapters-title">Оглавление</h2>
+            {% if chapters %}
+                <ul class="chapters">
+                    {% for chapter in chapters %}
+                        {{ render_chapter(chapter) }}
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>Оглавление недоступно</p>
+            {% endif %}
+        </div>
+    </div>
+    <script>
+        function toggleChapter(element) {
+            const childList = element.parentElement.nextElementSibling;
+            childList.classList.toggle('collapsed');
+            element.textContent = childList.classList.contains('collapsed') ? '⯈' : '▼';
+        }
+        
+        // Инициализация: скрыть все вложенные списки при загрузке
+        document.querySelectorAll('.child-chapters').forEach(list => {
+            list.classList.add('collapsed');
+        });
+        </script>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Главная страница{% endblock %}
+
+{% block content %}
+    <h1 class="page-title">Все книги</h1>
+    
+    <div class="books-grid">
+        {% for book in books %}
+            <article class="book-card">
+                <a href="{{ url_for('books.view', book_id=book.id) }}">
+                    <div class="book-cover">
+                        {% if book.cover_path %}
+                            <img src="{{ url_for('books.serve_content', filename=book.cover_path) }}" alt="{{ book.title }}">
+                        {% endif %}
+                    </div>
+                    <div class="book-info">
+                        <h2 class="book-title">{{ book.title }}</h2>
+                        <p class="book-author">{{ book.author }}</p>
+                    </div>
+                </a>
+            </article>
+        {% endfor %}
+    </div>
+{% endblock %}
