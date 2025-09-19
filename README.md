@@ -19,29 +19,41 @@ Database ER-model
 
 The layout of the main page
 
-<img width="643" height="596" alt="image" src="https://github.com/user-attachments/assets/a8eb4273-0551-48d6-ae35-2e45724235aa" />
+<img width="643" height="596" alt="image" src="https://github.com/user-attachments/assets/32ad722c-61e7-4997-a8e3-af0f1be55e8e" />
+
 
 
 The layout of the book page
-<img width="1160" height="1065" alt="image" src="https://github.com/user-attachments/assets/e7ae0458-90d2-447b-9444-5121c9d8419b" />
+
+<img width="741" height="631" alt="image" src="https://github.com/user-attachments/assets/2c48079d-f4d4-426f-b598-5d85e0fe923f" />
+
 
 Chapter Page Layout
-<img width="1160" height="1065" alt="image" src="https://github.com/user-attachments/assets/e55b75f3-3d31-42bf-8549-cdeaccc2cd01" />
+
+<img width="1034" height="949" alt="image" src="https://github.com/user-attachments/assets/bb1e8524-0fba-4641-995d-fdf7918608e8" />
+
 
 Layout of the My Bookmarks page
-<img width="1034" height="511" alt="image" src="https://github.com/user-attachments/assets/3e97d76f-5ed7-43f9-ba93-14acd99ffeee" />
+<img width="1034" height="511" alt="image" src="https://github.com/user-attachments/assets/687fbf3c-d0aa-4e45-a4d4-850f049cef6e" />
+
 
 Layout of Login page
-<img width="1034" height="528" alt="image" src="https://github.com/user-attachments/assets/5ab8526a-0ef9-4379-8534-3d13634af7bb" />
+<img width="1034" height="528" alt="image" src="https://github.com/user-attachments/assets/1d9967f3-16d3-4d10-a178-ac6fd29a2c8e" />
 
 Layout of Registration page
-<img width="1034" height="531" alt="image" src="https://github.com/user-attachments/assets/9692dca9-c436-4473-baad-543384025fc8" />
+<img width="1034" height="531" alt="image" src="https://github.com/user-attachments/assets/bd4afe8f-75da-4ce5-8fa4-de3bb6baa089" />
+
 
 A modal window with contextual mentions of a character
-<img width="1034" height="764" alt="image" src="https://github.com/user-attachments/assets/1e122d80-534b-4a03-a7b8-98fd4df725a0" />
+<img width="1034" height="764" alt="image" src="https://github.com/user-attachments/assets/aadfc543-2eb6-4f34-868b-32fc732caad5" />
 
 
 
+# How to run aplication on your local PC.
+1. Create SQL connection. (The connection parameters are specified in app/config.py. You may change it)
+1. Downland Database folder and make data export with MySQL Workbench (The schema you are exporting data to should be called library).
+2. Clone repo
+3. In the IDE terminal, write python run.py
 
 
 
