@@ -1,61 +1,229 @@
-# Electronic-library-of-school-literature
-The aim of the development is to reduce users' time spent searching for information about characters and navigating through the text of works while reading.
+# Электронная библиотека школьной литературы
 
-Functional requirements:
-1. Create personal profiles for readers with the ability to manage bookmarks;
-2. Downloading and structured storage of literary works divided into chapters;
-3. Implementation of a bookmarking system to preserve the progress of reading works;
-4. Providing contextual information about characters through interactive interface elements;
-5. The ability to navigate through the structure of the work through a detailed table of contents.
+Веб-приложение для комфортного чтения произведений школьной программы с интерактивными возможностями: навигация по главам, система закладок и контекстная информация о персонажах.
 
-Non-functional requirements:
-1. Convenience and ease of use of the user interface, optimized for long-term reading;
-2. High performance and fast loading of text content of literary works;
-3. Adaptability of the interface for comfortable reading on various devices.
+## 🚀 Особенности
 
-Database ER-model
-<img width="1034" height="660" alt="image" src="https://github.com/user-attachments/assets/ca1db010-e886-45be-af22-7f332b155efc" />
+- **📚 Каталог книг** – удобный просмотр доступных произведений с обложками и краткой информацией
+- **📖 Чтение с типографикой** – оптимизированный интерфейс для длительного чтения
+- **📑 Иерархическое оглавление** – быстрая навигация по главам
+- **🔖 Система закладок** – сохранение прогресса чтения, управление закладками в личном кабинете
+- **👥 Контекстная информация о персонажах** – уникальная функция: клик на имя героя открывает сводку всех его появлений в предыдущих главах
+- **🔐 Аутентификация и регистрация** – доступ к персонализированным функциям через сессии Flask
+- **📱 Адаптивный интерфейс** – комфортное чтение на компьютерах, планшетах и смартфонах
+
+## 🛠 Технологии
+
+- Python 3.8+
+- Flask 2.x (микрофреймворк)
+- Jinja2 (шаблонизатор)
+- MySQL 8.0
+- JavaScript (ES6)
+- HTML5, CSS3
+- Visual Studio Code
+- Figma (прототипирование)
+- MySQL Workbench 8.0
+
+## 📦 Установка и запуск
+
+### 1. Клонирование репозитория
+```bash
+git clone <repository-url>
+cd school-library
+```
+
+### 2. Создание виртуального окружения
+```bash
+python -m venv venv
+source venv/bin/activate   # Linux/Mac
+# или
+venv\Scripts\activate      # Windows
+```
+
+### 3. Установка зависимостей
+```bash
+pip install -r requirements.txt
+```
+*Основные зависимости: Flask, Flask-SQLAlchemy, mysql-connector-python, python-dotenv*
+
+### 4. Настройка окружения
+Создайте файл `.env` в корне проекта и укажите параметры подключения к базе данных:
+```
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=yourpassword
+DB_NAME=school_library
+SECRET_KEY=your-secret-key
+```
+
+### 5. Создание базы данных
+Убедитесь, что MySQL сервер запущен, и выполните:
+```bash
+mysql -u root -p < database/schema.sql
+```
+Либо импортируйте `schema.sql` через MySQL Workbench.
+
+### 6. Запуск приложения
+```bash
+flask run
+```
+Сервер будет доступен по адресу: `http://127.0.0.1:5000`
+
+## 🔐 Тестовые пользователи
+
+После регистрации через интерфейс приложения вы можете создать собственную учётную запись. Для быстрого тестирования можно использовать предварительно созданного пользователя (если вы наполнили базу тестовыми данными). В стандартной поставке тестовые пользователи отсутствуют – регистрация открыта для всех.
+
+## 📡 Основные маршруты (Endpoints)
+
+### Публичные (не требуют аутентификации)
+- `GET /` – главная страница с каталогом книг
+- `GET /books/<int:book_id>` – страница книги с оглавлением
+- `GET /books/<int:book_id>/chapter/<int:chapter_id>` – чтение главы
+- `GET /auth/login` – форма входа
+- `GET /auth/register` – форма регистрации
+
+### Требуют аутентификации
+- `POST /auth/login` – вход
+- `POST /auth/register` – регистрация
+- `GET /auth/logout` – выход
+- `GET /books/bookmarks` – страница «Мои закладки»
+- `GET /books/<int:book_id>/chapter/<int:chapter_id>/bookmark/status` – проверка статуса закладки (JSON)
+- `POST /books/<int:book_id>/chapter/<int:chapter_id>/bookmark` – переключение закладки (JSON)
+- `POST /books/bookmark/<int:bookmark_id>/delete` – удаление закладки (JSON)
+- `GET /books/<int:book_id>/character/<int:character_id>/chapters-summary` – получение сводки появлений персонажа (JSON)
+
+## 🗄 Структура базы данных
+
+### Основные модели
+
+#### Books (книги)
+- `id` – уникальный идентификатор
+- `title` – название книги
+- `author` – автор
+- `cover_image` – путь к обложке
+- `description` – краткое описание
+
+#### Chapters (главы)
+- `id` – идентификатор
+- `book_id` – связь с книгой
+- `parent_id` – родительская глава (для подглав)
+- `number` – порядковый номер
+- `title` – название главы
+- `content_path` – путь к файлу с текстом
+- `is_processed` – флаг обработки (для выделения персонажей)
+
+#### Characters (персонажи)
+- `id` – идентификатор
+- `book_id` – связь с книгой
+- `name` – каноническое имя персонажа
+
+#### Name_variants (варианты имён)
+- `id` – идентификатор
+- `character_id` – связь с персонажем
+- `variant` – вариант имени (например, «Раскольников», «Родя»)
+
+#### Character_appearances (появления персонажа)
+- `id` – идентификатор
+- `character_id` – связь с персонажем
+- `chapter_id` – связь с главой
+- `context` – контекст (фрагмент текста)
+
+#### Users (пользователи)
+- `id` – идентификатор
+- `username` – имя пользователя
+- `email` – электронная почта
+- `password_hash` – хэш пароля
+- `created_at`, `last_login` – временные метки
+
+#### Bookmarks (закладки)
+- `id` – идентификатор
+- `user_id` – связь с пользователем
+- `book_id` – связь с книгой
+- `chapter_id` – связь с главой
+- `created_at` – дата создания
+
+### ER-диаграмма
+
+<img width="1034" height="660" alt="image" src="https://github.com/user-attachments/assets/1a066765-23b0-48ce-b60a-ecc5df6af40d" />
 
 
-The layout of the main page
+## 🖥 Интерфейс приложения
 
-<img width="643" height="596" alt="image" src="https://github.com/user-attachments/assets/32ad722c-61e7-4997-a8e3-af0f1be55e8e" />
+Ниже представлены основные экраны разработанного веб-приложения.
 
-
-
-The layout of the book page
-
-<img width="741" height="631" alt="image" src="https://github.com/user-attachments/assets/2c48079d-f4d4-426f-b598-5d85e0fe923f" />
+### Главная страница (каталог книг)
+<img width="643" height="596" alt="image" src="https://github.com/user-attachments/assets/5a7f900d-4706-4f16-b187-cea838254544" />
 
 
-Chapter Page Layout
-
-<img width="1034" height="949" alt="image" src="https://github.com/user-attachments/assets/bb1e8524-0fba-4641-995d-fdf7918608e8" />
-
-
-Layout of the My Bookmarks page
-<img width="1034" height="511" alt="image" src="https://github.com/user-attachments/assets/687fbf3c-d0aa-4e45-a4d4-850f049cef6e" />
+### Страница книги с оглавлением
+<img width="741" height="631" alt="image" src="https://github.com/user-attachments/assets/8b856361-609f-4296-bab9-ad5ba4c9a5de" />
 
 
-Layout of Login page
-<img width="1034" height="528" alt="image" src="https://github.com/user-attachments/assets/1d9967f3-16d3-4d10-a178-ac6fd29a2c8e" />
-
-Layout of Registration page
-<img width="1034" height="531" alt="image" src="https://github.com/user-attachments/assets/bd4afe8f-75da-4ce5-8fa4-de3bb6baa089" />
-
-
-A modal window with contextual mentions of a character
-<img width="1034" height="764" alt="image" src="https://github.com/user-attachments/assets/aadfc543-2eb6-4f34-868b-32fc732caad5" />
+### Страница чтения главы
+<img width="1034" height="949" alt="image" src="https://github.com/user-attachments/assets/0fd1b020-ed20-457c-891e-3e478dafa45f" />
 
 
 
-# How to run aplication on your local PC.
-1. Create SQL connection. (The connection parameters are specified in app/config.py. You may change it)
-1. Downland Database folder and make data export with MySQL Workbench (The schema you are exporting data to should be called library).
-2. Clone repo
-3. In the IDE terminal, write python run.py
+### Модальное окно с контекстной информацией о персонаже
+<img width="1034" height="764" alt="image" src="https://github.com/user-attachments/assets/8348082c-3d15-46ce-ac81-dfd1d6633f5b" />
 
 
+### Страница «Мои закладки»
+<img width="1034" height="511" alt="image" src="https://github.com/user-attachments/assets/cf3cfa79-60fe-4d5a-b2f1-de3f7b3ee74c" />
 
 
+### Страница входа
+<img width="1034" height="528" alt="image" src="https://github.com/user-attachments/assets/900df495-4653-4fb8-85af-9b496e9822f8" />
 
+
+### Страница регистрации
+<img width="1034" height="531" alt="image" src="https://github.com/user-attachments/assets/4959b2b7-d0be-4626-b731-57fd09e753dc" />
+
+
+## 🔒 Система прав доступа
+
+- Доступ к чтению книг и глав открыт всем пользователям без аутентификации.
+- Для создания и просмотра закладок необходима регистрация и вход в систему.
+- Аутентификация реализована на основе сессий Flask. После успешного входа данные пользователя сохраняются в сессии.
+- Проверка прав осуществляется через декораторы-обёртки, которые проверяют наличие пользователя в сессии.
+
+## 🧪 Тестирование с помощью браузера или Postman
+
+### 1. Регистрация пользователя
+Отправьте POST-запрос на `/auth/register` с формат-данными (или через HTML-форму):
+```http
+POST /auth/register
+Content-Type: application/x-www-form-urlencoded
+
+username=testuser&email=test@example.com&password=secret&password_confirm=secret
+```
+
+### 2. Вход в систему
+```http
+POST /auth/login
+Content-Type: application/x-www-form-urlencoded
+
+username=testuser&password=secret
+```
+После успешного входа сервер установит сессионную cookie.
+
+### 3. Доступ к защищённым ресурсам (например, создание закладки)
+```http
+POST /books/1/chapter/3/bookmark
+Cookie: session=your-session-cookie
+```
+Ответ: `{"status": "added"}` или `{"status": "removed"}`.
+
+## 🚨 Обработка ошибок
+
+- **401 Unauthorized** – попытка доступа к защищённому ресурсу без аутентификации (редирект на страницу входа)
+- **403 Forbidden** – доступ запрещён (например, попытка изменить чужую закладку)
+- **404 Not Found** – книга, глава или страница не найдены
+- **400 Bad Request** – неверные данные формы (например, пароли не совпадают при регистрации)
+- **500 Internal Server Error** – внутренняя ошибка сервера
+
+## 📄 Лицензия
+
+Проект разработан в рамках выпускной квалификационной работы.
+
+---
