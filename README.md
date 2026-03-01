@@ -47,25 +47,14 @@ pip install -r requirements.txt
 *Основные зависимости: Flask, Flask-SQLAlchemy, mysql-connector-python, python-dotenv*
 
 ### 4. Настройка окружения
-Создайте файл `.env` в корне проекта и укажите параметры подключения к базе данных:
-```
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=yourpassword
-DB_NAME=school_library
-SECRET_KEY=your-secret-key
-```
+В файле config.py указаны параметры подключения к базе данных
 
 ### 5. Создание базы данных
-Убедитесь, что MySQL сервер запущен, и выполните:
-```bash
-mysql -u root -p < database/schema.sql
-```
-Либо импортируйте `schema.sql` через MySQL Workbench.
+Убедитесь, что MySQL сервер запущен, создайте схему с именем library и импортируйте папку Database через MySQL Workbench.
 
 ### 6. Запуск приложения
 ```bash
-flask run
+python run.py
 ```
 Сервер будет доступен по адресу: `http://127.0.0.1:5000`
 
